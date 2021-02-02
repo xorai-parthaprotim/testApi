@@ -28,10 +28,15 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,10 +54,8 @@ import static com.parth.tryapi.R.id.resP;
 public class MainActivity extends AppCompatActivity {
 
     private TextView res, resp;
-    private String recordPermission= Manifest.permission.READ_EXTERNAL_STORAGE;
-    private int PERMISSION_CODE=101;
-
-
+    private String recordPermission = Manifest.permission.READ_EXTERNAL_STORAGE;
+    private int PERMISSION_CODE = 101;
 
 
     @Override
@@ -67,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         get.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-               // sendGetRequest();
+                // sendGetRequest();
             }
         });
         post.setOnClickListener(new View.OnClickListener() {
@@ -86,85 +89,114 @@ public class MainActivity extends AppCompatActivity {
         final MediaType MEDIA_TYPE_OCTET = MediaType
                 .parse("application/octet-stream;");
         checkPermissions();
-        File file = new File("/storage/emulated/0/Android/data/com.example.speechaid/files/A.mp3");
-        //File file = new File("C://Users/user/Desktop/a.mp3");
-        String strFileName = file.getName();
+        File file = new File("file:///storage/emulated/0/Android/data/com.example.speechaid/files/A.mp3");
+        Uri uri = Uri.fromFile(file);
 
-        byte[] bdata = convertAudioToByteArray(strFileName);
+        String stringUri;
+        stringUri = uri.toString();
 
-        OkHttpClient client = new OkHttpClient();
-
-        Request request = new Request.Builder()
-                .url("http://192.168.43.6:5000/xorai_autox/messages")
-                .post(RequestBody.create(MEDIA_TYPE_OCTET, bdata))
-                .build();
-
-        Response response = client.newCall(request).execute();
-        resp.setText(response.body().string());
-
-//        //RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
-//        // String url = "http://192.168.43.126/xorai_apk/post.php";
-//        String url = "http://192.168.43.6:5000/xorai_autox/post_string";
-//
-//        //BytconeArrayFromAudio();
-//        convertAudioToByteArray(strFileName);
-//
-//        JSONObject js = new JSONObject();
-//        try {
-//            // js.put("id", "1");
-//            js.put("data", "xorai");
-//
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
-//
-//        JsonObjectRequest jsonObjReq = new JsonObjectRequest(
-//                Request.Method.POST, url, js,
-//                new Response.Listener<JSONObject>() {
-//                    @Override
-//                    public void onResponse(JSONObject response) {
-//                        try {
-//                            JSONObject obj = new JSONObject(response.toString());
-//                            //  String id = obj.getString("id");
-//                            String data = obj.getString("your data");
-//                            //String data = "Response: " + id+data ;
-//                            String data1 = " Data:" + data;
-//
-//                            resp.setText(data1);
-//                        } catch (JSONException e) {
-//                            resp.setText(e.toString());
-//                        }
-//
-//                    }
-//                }, new Response.ErrorListener() {
-//
-//            @Override
-//            public void onErrorResponse(VolleyError error) {
-//                //  String TAG = new String();
-//                // VolleyLog.d(TAG, "Error: " + error.getMessage());
-//                // hideProgressDialog();
-//                //  resp.setText("Response: Failed!");
-//            }
-//        }) {
-//
-//            /**
-//             * Passing some request headers
-//             */
-//            @Override
-//            public Map<String, String> getHeaders() throws AuthFailureError {
-//                HashMap<String, String> headers = new HashMap<String, String>();
-//                headers.put("Content-Type", "application/json");
-//                return headers;
-//            }
-//        };
-//
-//        requestQueue.add(jsonObjReq);
-
-
-
-
+        uploadFileNew(stringUri);
     }
 
+    public boolean uploadFileNew(String sourceFileUri) {
+        HttpURLConnection connection = null;
+        DataOutputStream outputStream = null;
+        DataInputStream inputStream = null;
+
+        String lineEnd = "\r\n";
+        String twoHyphens = "--";
+        String boundary = "*****";
+
+        int bytesRead, bytesAvailable, bufferSize;
+        byte[] buffer;
+        int maxBufferSize = 1 * 1024 * 1024;
+        File upFile = null;
+
+        try {
+            final File root = new File((Environment.getExternalStorageDirectory() + File.separator + "/Android/data/com.example.speechaid/files/A.mp3"));
+
+
+            root.mkdirs();
+            final String tmp[] = sourceFileUri.split(File.separator);
+            final String fname = tmp[tmp.length - 1];
+            upFile = new File(root, fname);
+
+
+            FileInputStream fileInputStream = new FileInputStream(upFile);
+
+
+            URL url = new URL("http://192.168.43.6:5000/xorai_autox/messages");
+            connection = (HttpURLConnection) url.openConnection();
+
+            // Allow Inputs & Outputs.
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.setUseCaches(false);
+
+            // Set HTTP method to POST.
+            connection.setReadTimeout(10000);
+            connection.setConnectTimeout(15000);
+            connection.setRequestMethod("POST");
+
+            connection.setRequestProperty("Connection", "Keep-Alive");
+
+            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+
+            outputStream = new DataOutputStream(connection.getOutputStream());
+            outputStream.writeBytes(twoHyphens + boundary + lineEnd);
+
+            outputStream.writeBytes("Content-Disposition: form-data; typ=\"" + 1 + "\"; name=\"" + fname + "\";filename=\"" + fname + "\"" + lineEnd);
+            outputStream.writeBytes(lineEnd);
+
+            bytesAvailable = fileInputStream.available();
+            bufferSize = Math.min(bytesAvailable, maxBufferSize);
+            buffer = new byte[bufferSize];
+
+            // Read file
+            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+            while (bytesRead > 0) {
+                outputStream.write(buffer, 0, bufferSize);
+                bytesAvailable = fileInputStream.available();
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            }
+
+            outputStream.writeBytes(lineEnd);
+            outputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+
+            // Responses from the server (code and message)
+            int serverResponseCode = connection.getResponseCode();
+            String serverResponseMessage = connection.getResponseMessage();
+            InputStream in = connection.getInputStream();
+
+            byte data[] = new byte[1024];
+            int counter = -1;
+
+            in.close();
+
+
+            if (serverResponseCode == 200) {
+                Log.d("uploadFile", "File Upload Complete.");
+            }
+
+            fileInputStream.close();
+            outputStream.flush();
+            outputStream.close();
+
+        }
+        catch(Exception ex)
+
+        {
+            Log.d("uploadFile", "File Upload Error:" + ex.toString());
+
+            return false;
+
+        }
+
+
+        return true;
+    }
 
 //    private void sendGetRequest() {
 //        RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
@@ -204,20 +236,12 @@ public class MainActivity extends AppCompatActivity {
 //        queue.add(jsonObjectRequest);
 //        //      queue.add(stringRequest);
 //    }
-    public byte[] convertAudioToByteArray(String path) throws IOException {
 
-        FileInputStream fis = new FileInputStream(path);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        byte[] b = new byte[1024];
 
-        for (int readNum; (readNum = fis.read(b)) != -1;) {
-            bos.write(b, 0, readNum);
-        }
 
-        byte[] bytes = bos.toByteArray();
 
-        return bytes;
-    }
+
+
 
     private boolean checkPermissions() {
         if(ActivityCompat.checkSelfPermission(this, recordPermission) == PackageManager.PERMISSION_GRANTED){
