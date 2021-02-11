@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -58,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private int PERMISSION_CODE = 101;
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,14 +90,20 @@ public class MainActivity extends AppCompatActivity {
     private void postRequest() throws IOException {
         final MediaType MEDIA_TYPE_OCTET = MediaType
                 .parse("application/octet-stream;");
+
+
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
         checkPermissions();
-        File file = new File("file:///storage/emulated/0/Android/data/com.example.speechaid/files/A.mp3");
+        File file = new File("storage/emulated/0/Android/data/com.example.speechaid/files/A.mp3");
         Uri uri = Uri.fromFile(file);
 
         String stringUri;
         stringUri = uri.toString();
 
         uploadFileNew(stringUri);
+        resp.setText("File Upload Complete");
     }
 
     public boolean uploadFileNew(String sourceFileUri) {
@@ -113,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
         File upFile = null;
 
         try {
-            final File root = new File((Environment.getExternalStorageDirectory() + File.separator + "/Android/data/com.example.speechaid/files/A.mp3"));
+            final File root = new File("storage/emulated/0/Android/data/com.example.speechaid/files");
 
 
             root.mkdirs();
@@ -140,12 +148,12 @@ public class MainActivity extends AppCompatActivity {
 
             connection.setRequestProperty("Connection", "Keep-Alive");
 
-            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+            connection.setRequestProperty("Content-Type", "application/octet-stream;boundary=" + boundary);
 
             outputStream = new DataOutputStream(connection.getOutputStream());
             outputStream.writeBytes(twoHyphens + boundary + lineEnd);
 
-            outputStream.writeBytes("Content-Disposition: form-data; typ=\"" + 1 + "\"; name=\"" + fname + "\";filename=\"" + fname + "\"" + lineEnd);
+            outputStream.writeBytes("Content-Disposition: octet-stream; typ=\"" + 1 + "\"; name=\"" + fname + "\";filename=\"" + fname + "\"" + lineEnd);
             outputStream.writeBytes(lineEnd);
 
             bytesAvailable = fileInputStream.available();
