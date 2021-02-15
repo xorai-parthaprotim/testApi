@@ -28,6 +28,7 @@ import android.widget.Toast;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -36,6 +37,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
@@ -87,6 +89,8 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
+
     private void postRequest() throws IOException {
         final MediaType MEDIA_TYPE_OCTET = MediaType
                 .parse("application/octet-stream;");
@@ -103,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         stringUri = uri.toString();
 
         uploadFileNew(stringUri);
-        resp.setText("File Upload Complete");
+
     }
 
     public boolean uploadFileNew(String sourceFileUri) {
@@ -146,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
             connection.setConnectTimeout(15000);
             connection.setRequestMethod("POST");
 
-            connection.setRequestProperty("Connection", "Keep-Alive");
+           // connection.setRequestProperty("Connection", "Keep-Alive");
 
             connection.setRequestProperty("Content-Type", "application/octet-stream;boundary=" + boundary);
 
@@ -178,15 +182,27 @@ public class MainActivity extends AppCompatActivity {
             String serverResponseMessage = connection.getResponseMessage();
             InputStream in = connection.getInputStream();
 
-            byte data[] = new byte[1024];
-            int counter = -1;
+            
+
+
+         //   byte data[] = new byte[1024];
+           // int counter = -1;
 
             in.close();
 
 
             if (serverResponseCode == 200) {
                 Log.d("uploadFile", "File Upload Complete.");
+                resp.setText(serverResponseMessage);
+//                BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+//               String strCurrentLine;
+//                while ((strCurrentLine = br.readLine()) != null) {
+//                    resp.setText(strCurrentLine);}
+
             }
+            Log.d("uploadFile",serverResponseMessage);
+
+
 
             fileInputStream.close();
             outputStream.flush();
